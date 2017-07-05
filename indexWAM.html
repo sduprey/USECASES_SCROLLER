@@ -1,0 +1,89 @@
+<html>
+	<head>
+		<!-- Semantic UI magic -->
+		<link rel="stylesheet" type="text/css" href="lib/semantic/semantic.min.css">
+		<script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+		<script src="lib/semantic/semantic.min.js"></script>
+		<!-- XLSX parser -->
+		<script src="lib/sheetJS/xlsx.core.min.js"></script>
+		<!-- Scrollbar remover -->
+		<style>::-webkit-scrollbar { display: none; }</style>
+	</head>
+	<!-- CellJS magic -->
+	<script src="https://www.celljs.org/cell.js"></script>
+	<script>
+		var import_button = function() {
+			var button = {
+				$components: [
+					{ $type: "label", for: "filePicker", class: "ui fluid massive icon button", $components: [ { $type: "i", class: "big sign in icon" } ], style: "margin-bottom: 20px" },
+					{ $type: "input", type: "file", id: "filePicker", style: "display: none",
+					  onchange: function(event) {
+									var reader = new FileReader();
+									reader.onload = function(e) {
+										var workbook = XLSX.read(e.target.result, {type : 'binary'});
+										var json_object = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+										// dirty hack to force update - hell, this should not have to happen in celljs !
+										document.querySelector("#main")._data = json_object;
+										document.querySelector("#main").$update();
+										// end of dirty hack
+									};
+									reader.onerror = function(ex) { console.log(ex) };
+									reader.readAsBinaryString(event.target.files[0]);
+								}
+			 		}
+				]
+			}
+			return button
+		}
+		var card_template = function(item){
+			var card = {
+				class: "ui fluid card",
+				id: "card-" + item.id,
+				onclick: function() { $("#modal-" + item.id).modal("show") },
+				$components: [
+					{ class: "image", $components: [ { $type: "img", src: item.image } ] },
+					{ class: "content", $components: [
+							{ $type: "a", class: "header", $text: item.title },
+							{ class: "meta", $components: [ { $type: "span", $text: item.description_short } ] },
+							{ $type: "span", class: "right floated", $components: item.tags.split(",").map( function(tag) { return { class: "ui label", $text: tag } } ) }
+						]
+					}
+				]
+			}
+			return card 
+		}
+		var modal_template = function(item){
+			var modal = {
+				class: "ui modal",
+				id: "modal-" + item.id,
+				$init: function() {
+					$(this).modal()//.modal('setting', 'transition', 'horizontal flip')
+				},
+				$components: [
+					{ $type: "i", class: "close icon" },
+					{ class: "header", $text: item.title },
+					{ class: "image content", $components: [
+						{ class: "ui medium image", $components: [ { $type: "img", src: item.image } ] },
+						{ class: "description", $components: [ { class: "ui header", $text: item.description_short }, { $type: "p", $text: item.description_long } ] }
+					] }
+				]
+			}
+			return modal 
+		}
+		var main = {
+			$cell: true,
+			id: "main",	
+			style: "padding: 30px;",
+			_data: [],
+			$components: [ /* Data input button */  import_button() ],
+			$update: function() {
+				this.$components = [
+					// Card stack
+					{ class: "ui three stackable cards", $components: this._data.map(card_template) },
+					// Modal windows
+					{ $components: this._data.map(modal_template) }
+				]
+			}
+		}
+	</script>
+</html>
